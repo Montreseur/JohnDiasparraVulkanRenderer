@@ -14,6 +14,9 @@ class HelloTriangleApplication {
 		const uint32_t winResX = 800;
 		const uint32_t winResY = 600;
 		GLFWwindow* window;
+
+		bool bValidateVulkanExt = true;
+		bool bValidateGLFWExt = true;
 		
 		// Application Life-Cycle
 		void run() {
@@ -54,14 +57,17 @@ class HelloTriangleApplication {
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;
 
+			validateVulkanExtensions();
+
 			/*
 				GLFW Instance Creation
 			*/
 
 			uint32_t glfwExtensionCount = 0;
 			const char** glfwExtensions;
-
 			glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+			validateGLFWExtentions(glfwExtensionCount, glfwExtensions);
 
 			createInfo.enabledExtensionCount = glfwExtensionCount;
 			createInfo.ppEnabledExtensionNames = glfwExtensions;
@@ -93,6 +99,26 @@ class HelloTriangleApplication {
 			vkDestroyInstance(instance, nullptr);
 			glfwDestroyWindow(window);
 			glfwTerminate();
+		}
+
+		void validateVulkanExtensions() {
+			uint32_t extensionCount = 0;
+			vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+			std::vector<VkExtensionProperties> extensions(extensionCount);
+			vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+			std::cout << "Vulkan Extensions Available:\n";
+
+			for (const auto& extension : extensions) {
+				std::cout << "\t" << extension.extensionName << "\n";
+			}
+		}
+
+		void validateGLFWExtentions(uint32_t extCount, const char** ext  ) {
+			std::cout << "GLFW Extensions Available: \n";
+
+			for (auto i = 0; i < extCount; ++i) {
+				std::cout << "\t" << ext[i] << "\n";
+			}
 		}
 
 };
