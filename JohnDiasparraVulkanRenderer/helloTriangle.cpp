@@ -61,6 +61,8 @@ class HelloTriangleApplication {
 		VkInstance instance; // Vulkan Instance is the connection between an application and the vulkan library.
 		VkDebugUtilsMessengerEXT debugMessenger;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; // Implicitly destroyed in cleanup. No manual cleanup needed.
+		VkDevice device;
+		VkQueue graphicsQueue;
 
 		struct QueueFamilyIndicies {
 			std::optional<uint32_t> graphicsFamily;
@@ -82,6 +84,7 @@ class HelloTriangleApplication {
 			createInstance();
 			setupDebugMessenger();
 			pickPhysicalDevice();
+			createLogicalDevice();
 		}
 
 		void mainLoop() {
@@ -94,6 +97,7 @@ class HelloTriangleApplication {
 		void cleanup() {
 			if (enableValidationLayers) {
 				DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+				vkDestroyDevice(device, nullptr);
 			}
 
 			vkDestroyInstance(instance, nullptr);
@@ -113,7 +117,7 @@ class HelloTriangleApplication {
 			appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 			appInfo.pEngineName = "MtVr Engine";
 			appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-			appInfo.apiVersion = VK_API_VERSION_1_0;
+			appInfo.apiVersion = VK_API_VERSION_1_3;
 
 			VkInstanceCreateInfo createInfo{};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -230,6 +234,38 @@ class HelloTriangleApplication {
 				i++;
 			}
 			return indicies;
+		}
+
+		void createLogicalDevice() {
+			float queuePriority = 1.0f;
+			QueueFamilyIndicies indicies = findQueueFamilies(physicalDevice);
+
+			VkDeviceQueueCreateInfo queueCreateInfo{};
+			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueCreateInfo.queueFamilyIndex = indicies.graphicsFamily.value();
+			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
+
+			VkPhysicalDeviceFeatures deviceFeatures{};
+			VkDeviceCreateInfo createInfo{};
+			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+			createInfo.pQueueCreateInfos = &queueCreateInfo;
+			createInfo.queueCreateInfoCount = 1;
+			createInfo.pEnabledFeatures = &deviceFeatures;
+
+			createInfo.enabledExtensionCount = 0;
+			if (enableValidationLayers) {
+				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+				createInfo.ppEnabledLayerNames = validationLayers.data();
+			}
+			else {
+				createInfo.enabledLayerCount = 0;
+			}
+		
+			if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+				throw std::runtime_error("Failed to create logical device.");
+			}
+			vkGetDeviceQueue(device, indicies.graphicsFamily.value(), 0, &graphicsQueue);
 		}
 
 		std::vector<const char*> getRequiredExtensions() {
